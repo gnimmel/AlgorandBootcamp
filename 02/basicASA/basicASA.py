@@ -153,7 +153,7 @@ def transfer_asset(_amnt, _assetId, _toAddr):
 
 
 #
-# Freeze Encodium ASA
+# Freeze ASA
 #
 def freeze_asset(_assetId, _addr):
     txn = AssetFreezeTxn(
@@ -170,7 +170,7 @@ def freeze_asset(_assetId, _addr):
 
 
 #
-# Revoke Encodium ASA
+# Revoke ASA
 #
 def revoke_asset(_assetID, _amnt, _targetAddr):
     txn = AssetTransferTxn(
@@ -188,7 +188,7 @@ def revoke_asset(_assetID, _amnt, _targetAddr):
 
 
 #
-# Revoke Encodium ASA
+# Revoke ASA
 #
 def destroy_asset(_assetID, _managerAddr, _managerPrivateKey):
     txn = AssetConfigTxn(
@@ -204,7 +204,7 @@ def destroy_asset(_assetID, _managerAddr, _managerPrivateKey):
 
 
 #
-# Log ASA Information Utility funcs
+# Print ASA Information Utility funcs
 #
 def print_created_asset(_client, _addr, _assetid):
     accountInfo = _client.account_info(_addr)
@@ -230,7 +230,6 @@ def print_asset_holding(_client, _addr, _assetid):
 
 
 def main():
-    #return
     #create the asset
     ASSET_ID = create_encodium_asa()
     
