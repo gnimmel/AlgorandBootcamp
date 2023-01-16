@@ -90,10 +90,10 @@ def clear():
 
 if __name__ == "__main__":
 
-    with open("../build/enb_approval.teal", "w") as f:
+    with open("../../build/enb_approval.teal", "w") as f:
         compiled = compileTeal(approval(), mode=Mode.Application) # Should thius be Mode.Signature ???
         f.write(compiled)
 
-    with open("../build/enb_clear_state.teal", "w") as f:
+    with open("../../build/enb_clear_state.teal", "w") as f:
         compiled = compileTeal(clear(), mode=Mode.Application)  # Should thius be Mode.Signature ???
         f.write(compiled)
