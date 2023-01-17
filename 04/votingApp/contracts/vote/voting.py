@@ -18,8 +18,8 @@ def approval():
 
     get_vote_of_sender = App.localGetEx(Int(0), App.id(), Bytes("voted"))
 
-    enb_id = App.globalGetEx(Txn.applications[1], Bytes("enbId"))
-    enb_balance = AssetHolding.balance(Txn.sender(), (enb_id.value())) # Int(enb_id) or Bytes(enb_id) ???
+    #enb_id = App.globalGetEx(Txn.applications[1], Bytes("enbId"))
+    enb_balance = AssetHolding.balance(Txn.sender(), Txn.assets[1])
     
     on_closeout = Seq(
         [
@@ -32,7 +32,7 @@ def approval():
                 ),
                 App.globalPut(
                     get_vote_of_sender.value(),
-#                    App.globalGet(get_vote_of_sender.value()) - (enb_balance.value()),
+                    App.globalGet(get_vote_of_sender.value()) - (enb_balance.value()),
                 ),
             ),
             Return(Int(1)),
@@ -89,8 +89,8 @@ def approval():
 
 def clear():
     get_vote_of_sender = App.localGetEx(Int(0), App.id(), Bytes("voted"))
-    enb_id = App.globalGetEx(Txn.applications[1], Bytes("enbId"))
-    enb_balance = AssetHolding.balance(Txn.sender(), (enb_id.value())) # Int(enb_id) or Bytes(enb_id) ???
+    #enb_id = App.globalGetEx(Txn.applications[1], Bytes("enbId"))
+    enb_balance = AssetHolding.balance(Txn.sender(), Txn.assets[1])
 
     program = Seq(
         [
@@ -104,7 +104,7 @@ def clear():
                 ),
                 App.globalPut(
                     get_vote_of_sender.value(),
-#                    App.globalGet(get_vote_of_sender.value()) - (enb_balance.value()),
+                    App.globalGet(get_vote_of_sender.value()) - (enb_balance.value()),
                 ),
             ),
             Return(Int(1)),1
