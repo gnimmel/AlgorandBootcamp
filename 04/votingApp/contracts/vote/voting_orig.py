@@ -1,11 +1,11 @@
 from pyteal import *
 
 
-def approval():
+def approval_program():
     on_creation = Seq(
         [
             App.globalPut(Bytes("Creator"), Txn.sender()),
-            Assert(Txn.application_args.length() == Int(5)),
+            Assert(Txn.application_args.length() == Int(4)),
             App.globalPut(Bytes("RegBegin"), Btoi(Txn.application_args[0])),
             App.globalPut(Bytes("RegEnd"), Btoi(Txn.application_args[1])),
             App.globalPut(Bytes("VoteBegin"), Btoi(Txn.application_args[2])),
@@ -16,15 +16,11 @@ def approval():
 
     is_creator = Txn.sender() == App.globalGet(Bytes("Creator"))
 
-    get_vote_of_sender = App.localGetEx(Int(0), App.id(), Bytes("voted"))
+    get_vote_of_sender = App.localGetEx(Int(0), Int(0), Bytes("voted"))
 
-    #enb_id = App.globalGetEx(Txn.applications[1], Bytes("enbId"))
-    enb_balance = AssetHolding.balance(Txn.sender(), Txn.assets[1])
-    
     on_closeout = Seq(
         [
             get_vote_of_sender,
-            enb_balance,
             If(
                 And(
                     Global.round() <= App.globalGet(Bytes("VoteEnd")),
@@ -32,7 +28,7 @@ def approval():
                 ),
                 App.globalPut(
                     get_vote_of_sender.value(),
-                    App.globalGet(get_vote_of_sender.value()) - (enb_balance.value()),
+                    App.globalGet(get_vote_of_sender.value()) - Int(1),
                 ),
             ),
             Return(Int(1)),
@@ -48,7 +44,6 @@ def approval():
 
     choice = Txn.application_args[1]
     choice_tally = App.globalGet(choice)
-
     on_vote = Seq(
         [
             Assert(
@@ -58,22 +53,8 @@ def approval():
                 )
             ),
             get_vote_of_sender,
-            If(get_vote_of_sender.hasValue(), Return(Int(0))), # User already voted
-            enb_balance,
-            Assert(
-                And(
-                    enb_balance.hasValue(),
-                    enb_balance.value() >= Int(1000),
-                )
-            ),
-            Assert(
-                Or(
-                    choice == Bytes("yes"),
-                    choice == Bytes("no"),
-                    choice == Bytes("abstain")
-                )
-            ),
-            App.globalPut(choice, choice_tally + enb_balance.value()), #### 
+            If(get_vote_of_sender.hasValue(), Return(Int(0))),
+            App.globalPut(choice, choice_tally + Int(1)),
             App.localPut(Int(0), Bytes("voted"), choice),
             Return(Int(1)),
         ]
@@ -91,24 +72,19 @@ def approval():
     return program
 
 
-def clear():
-    get_vote_of_sender = App.localGetEx(Int(0), App.id(), Bytes("voted"))
-    #enb_id = App.globalGetEx(Txn.applications[1], Bytes("enbId"))
-    enb_balance = AssetHolding.balance(Txn.sender(), Txn.assets[1])
-
+def clear_state_program():
+    get_vote_of_sender = App.localGetEx(Int(0), Int(0), Bytes("voted"))
     program = Seq(
         [
             get_vote_of_sender,
-            enb_balance,
             If(
                 And(
                     Global.round() <= App.globalGet(Bytes("VoteEnd")),
                     get_vote_of_sender.hasValue(),
-                    enb_balance.hasValue(),
                 ),
                 App.globalPut(
                     get_vote_of_sender.value(),
-                    App.globalGet(get_vote_of_sender.value()) - enb_balance.value(),
+                    App.globalGet(get_vote_of_sender.value()) - Int(1),
                 ),
             ),
             Return(Int(1)),
@@ -119,10 +95,10 @@ def clear():
 
 
 if __name__ == "__main__":
-    with open("../../build/vote_approval.teal", "w") as f:
-        compiled = compileTeal(approval(), mode=Mode.Application, version=MAX_TEAL_VERSION)
+    with open("vote_approval.teal", "w") as f:
+        compiled = compileTeal(approval_program(), Mode.Application, version=MAX_TEAL_VERSION)
         f.write(compiled)
 
-    with open("../../build/vote_clear_state.teal", "w") as f:
-        compiled = compileTeal(clear(), mode=Mode.Application, version=MAX_TEAL_VERSION)
+    with open("vote_clear_state.teal", "w") as f:
+        compiled = compileTeal(clear_state_program(), Mode.Application, version=MAX_TEAL_VERSION)
         f.write(compiled)

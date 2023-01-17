@@ -1,0 +1,30 @@
+#pragma version 5
+int 0
+global CurrentApplicationID
+byte "voted"
+app_local_get_ex
+store 0
+store 1
+txn Sender
+txna Assets 1
+asset_holding_get AssetBalance
+store 2
+store 3
+global Round
+byte "VoteEnd"
+app_global_get
+<=
+load 0
+&&
+load 2
+&&
+bz main_l2
+load 1
+load 1
+app_global_get
+load 3
+-
+app_global_put
+main_l2:
+int 1
+return
