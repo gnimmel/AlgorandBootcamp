@@ -32,7 +32,7 @@ def approval():
                 ),
                 App.globalPut(
                     get_vote_of_sender.value(),
-                    App.globalGet(get_vote_of_sender.value()) - (enb_balance.value()),
+#                    App.globalGet(get_vote_of_sender.value()) - (enb_balance.value()),
                 ),
             ),
             Return(Int(1)),
@@ -61,6 +61,7 @@ def approval():
             If(get_vote_of_sender.hasValue(), Return(Int(0))), # User already voted
             enb_balance,
             Assert(enb_balance.hasValue()),
+            Ge(enb_balance.value(), Int(1000)),
             Assert(
                 Or(
                     choice == Bytes("yes"),
@@ -103,7 +104,7 @@ def clear():
                 ),
                 App.globalPut(
                     get_vote_of_sender.value(),
-                    App.globalGet(get_vote_of_sender.value()) - (enb_balance.value()),
+#                    App.globalGet(get_vote_of_sender.value()) - (enb_balance.value()),
                 ),
             ),
             Return(Int(1)),1
@@ -115,9 +116,9 @@ def clear():
 
 if __name__ == "__main__":
     with open("../../build/vote_approval.teal", "w") as f:
-        compiled = compileTeal(approval(), mode=Mode.Application, version=2)
+        compiled = compileTeal(approval(), mode=Mode.Application)
         f.write(compiled)
 
     with open("../../build/vote_clear_state.teal", "w") as f:
-        compiled = compileTeal(clear(), mode=Mode.Application, version=2)
+        compiled = compileTeal(clear(), mode=Mode.Application)
         f.write(compiled)
