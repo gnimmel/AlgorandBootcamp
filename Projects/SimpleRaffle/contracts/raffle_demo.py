@@ -25,10 +25,10 @@ def demo():
     print("### INIT ### \n")
     sp = client.suggested_params()
     # Create the app on chain, set the app id for the app client
-    app_id, app_addr, txid = app_client.create(price = .01 * consts.algo)
+    app_id, app_addr, txid = app_client.create(price = 1 * consts.algo)
     print(f"Created App with id: {app_id} and address addr: {app_addr} in tx: {txid}")
 
-    ticket_price = app_client.call(app.read_price)
+    ticket_price = app_client.call(app.read_ticket_price)
     print(f"Ticket price is set to {ticket_price.return_value} microAlgos")
 
     # Fund the contract for minimum balance
