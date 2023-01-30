@@ -3,6 +3,12 @@ from pyteal import *
 from beaker import *
 import logging
 
+# TODO: 
+# Reset / start new raffle
+# Raffle asset manager
+# Auto pick winner when tickets sold out 
+
+
 class Raffle(Application):
 
     ###
@@ -10,6 +16,7 @@ class Raffle(Application):
     ###
 
     # Max number of tickets that can be purchased
+    # TODO: Make this configurable
     MAX_NUM_TICKETS = 100
 
     # Max number of tickets that can be purchased per user
@@ -35,29 +42,30 @@ class Raffle(Application):
 
     commitment_round: Final[ApplicationStateValue] = ApplicationStateValue(
         TealType.uint64,
+        default=Int(0),
         descr="Round committed for randomness beacon",
     )
 
-    # Might be unnecessary... currently using Global.creator_address() where owner could be used instead
+    # Might be unnecessary... currently using Global.creator_address() where 'owner' could be used instead
     # OR keep it in case we want to transfer ownership later?
-    owner: Final[ApplicationStateValue] = ApplicationStateValue(
-        stack_type=TealType.bytes, 
-        default=Global.creator_address(),
-        descr="Creator of the Raffle"
-    )
+    # owner: Final[ApplicationStateValue] = ApplicationStateValue(
+    #     stack_type=TealType.bytes, 
+    #     default=Global.creator_address(),
+    #     descr="Creator of the Raffle"
+    # )
 
     ticket_price: Final[ApplicationStateValue] = ApplicationStateValue(
-        stack_type=abi.Uint64,
-        default=PRICE_PER_TICKET,
+        stack_type=TealType.uint64,
+        default=Int(PRICE_PER_TICKET),
         descr="Price per ticket"
     )
 
-    entries: Final[ApplicationStateValue] = ApplicationStateValue(
-        stack_type=abi.StaticArray(abi.Address, MAX_NUM_TICKETS),
-        descr="Array of account addresses that have purchased tickets"
-    )
+    # entries: Final[ApplicationStateValue] = ApplicationStateValue(
+    #     stack_type=abi.StaticArray(abi.Address, MAX_NUM_TICKETS),
+    #     descr="Array of account addresses that have purchased tickets"
+    # )
 
-    num_entries: Final[ApplicationStateValue] = ApplicationStateValue(
+    entriesArrayLength: Final[ApplicationStateValue] = ApplicationStateValue(
         stack_type=TealType.uint64,
         default=Int(0),
         descr="Number of tickets purchsed (aka entries.length)"
@@ -68,16 +76,16 @@ class Raffle(Application):
     ###
 
     # TODO: likely unnecessary. Unless user has to claim their winnings
-    is_winner: Final[AccountStateValue] = AccountStateValue(
-        stack_type=abi.Bool,
-        default=False,
-        descr="Whether or not you won!!"
-    )
+    # is_winner: Final[AccountStateValue] = AccountStateValue(
+    #     stack_type=abi.Bool,
+    #     default=False,
+    #     descr="Whether or not you won!!"
+    # )
 
     # TODO: likely unnecessary
     num_tickets: Final[AccountStateValue] = AccountStateValue(
-        stack_type=abi.Uint64,
-        default=0,
+        stack_type=TealType.uint64,
+        default=Int(0),
         descr="Number of tickets you hold"
     )
 
@@ -85,18 +93,68 @@ class Raffle(Application):
     # Externals
     ###
 
+    @external(authorize=Authorize.only(Global.creator_address()))
+    def finalize_raffle(self):
+        Assert(self.entriesArrayLength > 0) # Did anyone buy tickets?
+        
+        return Seq(
+            (indx := abi.Uint64()).set(self.get_random_int(self.entriesArrayLength)),
+        )
+        #indx = self.get_random_int()
+
+        # use indx to extract winning address
+        # set is_winner flag
+        # send prize
+        # end raffle
+
+    @external(authorize=Authorize.opted_in(Global.current_application_id()))
+    def buy_tickets(self, payment: abi.PaymentTransaction):
+        Assert(payment.get().amount() > self.ticket_price)
+        # assign tickets to user
+        # push user account to entries array
+        # update entryArrayLength
+
+    @external(authorize=Authorize.only(Global.creator_address()))
+    def init_raffle(self, prize: abi.Asset, price: abi.Uint64):
+        Assert()
+        # confirm there are no raffles running -> 
+        # update ticket price
 
     ###
     # Internals
     ###
 
-    @ internal(TealType.bytes)
-    def get_randomness(self, acct_round: Expr):
-        """get random from beacon for requested round"""
+    @internal(abi.Uint64)
+    def get_random_int(
+        self, 
+        max: abi.Uint64, 
+        *, 
+        output: abi.Uint64):
+        """Use randomness beacon to select an index from the entries array"""
+        won = abi.Uint64()
+
+        return Seq(
+            # # Get the randomness
+            (randomness := abi.DynamicBytes()).decode(
+                self.get_randomness(self.commitment_round)
+            ),
+            # # take the modulo of the random number and the length of the holders array to get a value within the array
+            won.set(randomness.get() % max),
+            #won.set(ExtractUint64(randomness.get(), Int(0)) % max),
+            If(won.get()).Then(
+                output.set(won)
+            ).Else(
+                output.set(0)
+            )
+        )
+
+    @internal(TealType.bytes)
+    def get_randomness(self):
+        """get random from beacon"""
         return Seq(
             # Prep arguments
-            (round := abi.Uint64()).set(acct_round),
-            (user_data := abi.make(abi.DynamicArray[abi.Byte])).set([]),
+            (round := abi.Uint64()).set(self.commitment_round),
+            (user_data := abi.make(abi.DynamicArray[abi.Byte])).set([]), # Should entropy be something else? 
             
             InnerTxnBuilder.ExecuteMethodCall(
                 app_id=self.beacon_app_id,
@@ -118,18 +176,19 @@ class Raffle(Application):
         return Seq(
             self.initialize_application_state(),
             self.ticket_price.set(price.get()),
+            self.commitment_round.set(round.load()),
         )
 
-    @ opt_in
+    @opt_in
     def opt_in(self):
         return Approve()
 
-    @ update(authorize=Authorize.only(Global.creator_address()))
+    @update(authorize=Authorize.only(Global.creator_address()))
     def update(self):
         return Approve()
 
     # HOW DOES ARRAY MANIPULATION WORK???? deletion etc... if at all
-    @ clear_state
+    @clear_state
     def clear_state(self):
         return Seq(
             # Did sender buy any tickets?
@@ -140,7 +199,7 @@ class Raffle(Application):
             Approve(),
         )
 
-    @ close_out
+    @close_out
     def close_out(self):
         return Seq(
             # Did sender buy any tickets?
@@ -150,3 +209,36 @@ class Raffle(Application):
             ),
             Approve(),
         )
+
+    ###
+    # Read Only
+    ###
+    
+    @external(read_only=True)
+    def read_num_entries(self, *, output: abi.Uint64):
+        """Read total number of entries. Only callable by Creator."""
+        return output.set(self.entriesArrayLength)
+    
+    @external(read_only=True)
+    def read_ticket_price(self, *, output: abi.Uint64):
+        """Read price per ticket. Only callable by Creator."""
+        return output.set(self.ticket_price)
+
+if __name__ == "__main__":
+    import os
+    import json
+
+    path = os.path.dirname(os.path.abspath(__file__))
+
+    raffle_app = Raffle()
+
+    # Dump out the contract as json that can be read in by any of the SDKs
+    with open(os.path.join(path, "contract.json"), "w") as f:
+        f.write(json.dumps(raffle_app.application_spec(), indent=2))
+
+    # Write out the approval and clear programs
+    with open(os.path.join(path, "approval.teal"), "w") as f:
+        f.write(raffle_app.approval_program)
+
+    with open(os.path.join(path, "clear.teal"), "w") as f:
+        f.write(raffle_app.clear_program)
