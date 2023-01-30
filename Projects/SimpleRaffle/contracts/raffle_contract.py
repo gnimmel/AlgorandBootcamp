@@ -251,6 +251,7 @@ class Raffle(Application):
         """Read price per ticket. Only callable by Creator."""
         return output.set(self.ticket_price)
 
+
 if __name__ == "__main__":
     import os
     import json

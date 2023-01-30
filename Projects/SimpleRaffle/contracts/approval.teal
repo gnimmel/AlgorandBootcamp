@@ -1,0 +1,343 @@
+#pragma version 8
+intcblock 0 1
+bytecblock 0x656e747269657341727261794c656e677468 0x7469636b65745f7072696365 0x151f7c75 0x636f6d6d69746d656e745f726f756e64
+txn NumAppArgs
+intc_0 // 0
+==
+bnz main_l14
+txna ApplicationArgs 0
+pushbytes 0x99c3da98 // "finalize_raffle()void"
+==
+bnz main_l13
+txna ApplicationArgs 0
+pushbytes 0x261c31a9 // "buy_tickets(pay,uint64)void"
+==
+bnz main_l12
+txna ApplicationArgs 0
+pushbytes 0x29d6d088 // "init_raffle(asset,uint64)void"
+==
+bnz main_l11
+txna ApplicationArgs 0
+pushbytes 0x240d2f67 // "create(uint64)void"
+==
+bnz main_l10
+txna ApplicationArgs 0
+pushbytes 0x5c75db57 // "read_num_entries()uint64"
+==
+bnz main_l9
+txna ApplicationArgs 0
+pushbytes 0x6893680e // "read_ticket_price()uint64"
+==
+bnz main_l8
+err
+main_l8:
+txn OnCompletion
+intc_0 // NoOp
+==
+txn ApplicationID
+intc_0 // 0
+!=
+&&
+assert
+callsub readticketprice_13
+store 5
+bytec_2 // 0x151f7c75
+load 5
+itob
+concat
+log
+intc_1 // 1
+return
+main_l9:
+txn OnCompletion
+intc_0 // NoOp
+==
+txn ApplicationID
+intc_0 // 0
+!=
+&&
+assert
+callsub readnumentries_12
+store 4
+bytec_2 // 0x151f7c75
+load 4
+itob
+concat
+log
+intc_1 // 1
+return
+main_l10:
+txn OnCompletion
+intc_0 // NoOp
+==
+txn ApplicationID
+intc_0 // 0
+==
+&&
+assert
+txna ApplicationArgs 1
+btoi
+callsub create_11
+intc_1 // 1
+return
+main_l11:
+txn OnCompletion
+intc_0 // NoOp
+==
+txn ApplicationID
+intc_0 // 0
+!=
+&&
+assert
+txna ApplicationArgs 1
+intc_0 // 0
+getbyte
+store 2
+txna ApplicationArgs 2
+btoi
+store 3
+load 2
+load 3
+callsub initraffle_10
+intc_1 // 1
+return
+main_l12:
+txn OnCompletion
+intc_0 // NoOp
+==
+txn ApplicationID
+intc_0 // 0
+!=
+&&
+assert
+txna ApplicationArgs 1
+btoi
+store 1
+txn GroupIndex
+intc_1 // 1
+-
+store 0
+load 0
+gtxns TypeEnum
+intc_1 // pay
+==
+assert
+load 0
+load 1
+callsub buytickets_9
+intc_1 // 1
+return
+main_l13:
+txn OnCompletion
+intc_0 // NoOp
+==
+txn ApplicationID
+intc_0 // 0
+!=
+&&
+assert
+callsub finalizeraffle_8
+intc_1 // 1
+return
+main_l14:
+txn OnCompletion
+intc_1 // OptIn
+==
+bnz main_l20
+txn OnCompletion
+pushint 2 // CloseOut
+==
+bnz main_l19
+txn OnCompletion
+pushint 4 // UpdateApplication
+==
+bnz main_l18
+err
+main_l18:
+txn ApplicationID
+intc_0 // 0
+!=
+assert
+callsub update_5
+intc_1 // 1
+return
+main_l19:
+txn ApplicationID
+intc_0 // 0
+!=
+assert
+callsub closeout_6
+intc_1 // 1
+return
+main_l20:
+txn ApplicationID
+intc_0 // 0
+!=
+assert
+callsub optin_3
+intc_1 // 1
+return
+
+// auth_only
+authonly_0:
+proto 1 1
+frame_dig -1
+global CreatorAddress
+==
+retsub
+
+// auth_opted_in
+authoptedin_1:
+proto 1 1
+frame_dig -1
+global CurrentApplicationID
+app_opted_in
+retsub
+
+// auth_only
+authonly_2:
+proto 1 1
+frame_dig -1
+global CreatorAddress
+==
+retsub
+
+// opt_in
+optin_3:
+proto 0 0
+intc_1 // 1
+return
+
+// auth_only
+authonly_4:
+proto 1 1
+frame_dig -1
+global CreatorAddress
+==
+retsub
+
+// update
+update_5:
+proto 0 0
+txn Sender
+callsub authonly_4
+// unauthorized
+assert
+intc_1 // 1
+return
+
+// close_out
+closeout_6:
+proto 0 0
+intc_1 // 1
+return
+
+// auth_only
+authonly_7:
+proto 1 1
+frame_dig -1
+global CreatorAddress
+==
+retsub
+
+// finalize_raffle
+finalizeraffle_8:
+proto 0 0
+txn Sender
+callsub authonly_0
+// unauthorized
+assert
+bytec_0 // "entriesArrayLength"
+app_global_get
+intc_0 // 0
+>
+assert
+intc_1 // 1
+return
+
+// buy_tickets
+buytickets_9:
+proto 2 0
+txn Sender
+callsub authoptedin_1
+// unauthorized
+assert
+frame_dig -2
+gtxns Amount
+bytec_1 // "ticket_price"
+app_global_get
+>
+assert
+txn Sender
+pushbytes 0x6e756d5f7469636b657473 // "num_tickets"
+frame_dig -1
+app_local_put
+intc_1 // 1
+return
+
+// init_raffle
+initraffle_10:
+proto 2 0
+txn Sender
+callsub authonly_2
+// unauthorized
+assert
+bytec_0 // "entriesArrayLength"
+app_global_get
+intc_0 // 0
+==
+assert
+intc_1 // 1
+return
+
+// create
+create_11:
+proto 1 0
+pushbytes 0x626561636f6e5f6170705f6964 // "beacon_app_id"
+pushint 110096026 // 110096026
+app_global_put
+bytec_3 // "commitment_round"
+intc_0 // 0
+app_global_put
+pushbytes 0x6f776e6572 // "owner"
+global CreatorAddress
+app_global_put
+bytec_1 // "ticket_price"
+pushint 1000000 // 1000000
+app_global_put
+bytec_0 // "entriesArrayLength"
+intc_0 // 0
+app_global_put
+bytec_1 // "ticket_price"
+frame_dig -1
+app_global_put
+global Round
+pushint 3 // 3
++
+store 6
+bytec_3 // "commitment_round"
+load 6
+app_global_put
+retsub
+
+// read_num_entries
+readnumentries_12:
+proto 0 1
+intc_0 // 0
+txn Sender
+callsub authonly_7
+// unauthorized
+assert
+bytec_0 // "entriesArrayLength"
+app_global_get
+frame_bury 0
+retsub
+
+// read_ticket_price
+readticketprice_13:
+proto 0 1
+intc_0 // 0
+bytec_1 // "ticket_price"
+app_global_get
+frame_bury 0
+retsub
