@@ -35,6 +35,31 @@ def demo():
     app_client.fund(100*consts.milli_algo)
     print(f"Raffle Balance: {client.account_info(app_addr).get('amount')} microAlgos \n")
 
+    #app_client.call(app.finalize_raffle)
+
+    # ALICE BUY TICKETS 
+    print("### ALICE ###\n")
+    
+    # Set up Guest 1 application client
+    app_client_alice = app_client.prepare(signer=user_acct1.signer)
+
+    # Alice opting in and buying tickets
+    print("Alice buying tickets...")
+    ptxn = TransactionWithSigner(
+            txn=transaction.PaymentTxn(user_acct1.address, sp, app_addr, 10 * consts.algo),
+            signer=user_acct1.signer,
+        )
+    
+    # Opt in to contract with event registration payment included
+    app_client_alice.opt_in()
+
+    app_client_alice.call(app.buy_tickets, payment=ptxn, numTickets=3)
+
+    acct_state = app_client_alice.get_account_state()
+    num = acct_state["num_tickets"]
+    print(f"Alice bought {num} tickets")
+
+
 
 if __name__ == "__main__":
     demo()

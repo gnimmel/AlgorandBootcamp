@@ -1,6 +1,7 @@
 from typing import *
 from pyteal import *
 from beaker import *
+from beaker.lib.storage import Mapping, List
 import logging
 
 # TODO: 
@@ -68,6 +69,8 @@ class Raffle(Application):
     #     descr="Array of account addresses that have purchased tickets"
     # )
 
+    ticketAddresses = List(abi.Address, 100)
+
     entriesArrayLength: Final[ApplicationStateValue] = ApplicationStateValue(
         stack_type=TealType.uint64,
         default=Int(0),
@@ -98,9 +101,10 @@ class Raffle(Application):
 
     @external(authorize=Authorize.only(Global.creator_address()))
     def finalize_raffle(self):
+        
         return Seq(
-            Assert(self.entriesArrayLength.get() > Int(0)), # Did anyone buy tickets?
-
+            Assert(self.entriesArrayLength > Int(0)), # Did anyone buy tickets?
+            #print(self.get_random_int(self.entriesArrayLength)),
             Approve()
         )
 
@@ -117,11 +121,12 @@ class Raffle(Application):
 
     @external(authorize=Authorize.opted_in(Global.current_application_id())) 
     def buy_tickets(self, payment: abi.PaymentTransaction, numTickets: abi.Uint64):
-    
+        
         return Seq(
-            Assert(payment.get().amount() > self.ticket_price.get()),
+            Assert(payment.get().amount() > (numTickets.get() * self.ticket_price)),
 
             #numTickets.set(payment.get().amount() / self.ticket_price.get()),
+            
             self.num_tickets.set(numTickets.get()),
             #self.entriesArrayLength.get(),
             
@@ -149,8 +154,8 @@ class Raffle(Application):
     def get_random_int(
         self, 
         max: abi.Uint64, 
-        #*, 
-        #output: abi.Uint64
+        # *, 
+        # output: abi.Uint64
         ):
         """Use randomness beacon to select an index from the entries array"""
         #won = abi.Uint64()

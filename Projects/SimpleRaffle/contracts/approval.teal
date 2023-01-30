@@ -264,8 +264,10 @@ callsub authoptedin_1
 assert
 frame_dig -2
 gtxns Amount
+frame_dig -1
 bytec_1 // "ticket_price"
 app_global_get
+*
 >
 assert
 txn Sender
