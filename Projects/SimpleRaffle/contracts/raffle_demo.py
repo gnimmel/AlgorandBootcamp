@@ -37,7 +37,7 @@ def demo():
 
     #app_client.call(app.finalize_raffle)
 
-    # ALICE BUY TICKETS 
+    # ALICE BUYS TICKETS 
     print("### ALICE ###\n")
     
     # Set up Guest 1 application client
@@ -45,7 +45,7 @@ def demo():
 
     # Alice opting in and buying tickets
     print("Alice buying tickets...")
-    ptxn = TransactionWithSigner(
+    ptxn1 = TransactionWithSigner(
             txn=transaction.PaymentTxn(user_acct1.address, sp, app_addr, 10 * consts.algo),
             signer=user_acct1.signer,
         )
@@ -53,12 +53,39 @@ def demo():
     # Opt in to contract with event registration payment included
     app_client_alice.opt_in()
 
-    app_client_alice.call(app.buy_tickets, payment=ptxn, numTickets=3)
+    app_client_alice.call(app.buy_tickets, payment=ptxn1, numTickets=3)
 
     acct_state = app_client_alice.get_account_state()
     num = acct_state["num_tickets"]
     print(f"Alice bought {num} tickets")
 
+    
+    # BOB BUYS TICKETS 
+    print("### BOB ###\n")
+    
+    # Set up Guest 1 application client
+    app_client_bob = app_client.prepare(signer=user_acct2.signer)
+
+    # Alice opting in and buying tickets
+    print("Alice buying tickets...")
+    ptxn2 = TransactionWithSigner(
+            txn=transaction.PaymentTxn(user_acct2.address, sp, app_addr, 10 * consts.algo),
+            signer=user_acct2.signer,
+        )
+    
+    # Opt in to contract with event registration payment included
+    app_client_bob.opt_in()
+
+    app_client_bob.call(app.buy_tickets, payment=ptxn2, numTickets=5)
+
+    acct_state = app_client_bob.get_account_state()
+    num = acct_state["num_tickets"]
+    print(f"Bob bought {num} tickets")
+
+
+    # How many tickets have been purchased?
+    total = app_client.call(app.read_num_entries)
+    print(f"Total tickets bought: {total.return_value}")
 
 
 if __name__ == "__main__":
