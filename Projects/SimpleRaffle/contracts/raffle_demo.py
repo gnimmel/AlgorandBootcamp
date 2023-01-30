@@ -35,6 +35,8 @@ def demo():
     app_client.fund(100*consts.milli_algo)
     print(f"Raffle Balance: {client.account_info(app_addr).get('amount')} microAlgos \n")
 
+#    app_client.call(app.init_raffle)
+
     #app_client.call(app.finalize_raffle)
 
     # ALICE BUYS TICKETS 
