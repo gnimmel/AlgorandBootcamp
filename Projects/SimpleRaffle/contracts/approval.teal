@@ -274,6 +274,12 @@ txn Sender
 pushbytes 0x6e756d5f7469636b657473 // "num_tickets"
 frame_dig -1
 app_local_put
+bytec_0 // "entriesArrayLength"
+bytec_0 // "entriesArrayLength"
+app_global_get
+frame_dig -1
++
+app_global_put
 intc_1 // 1
 return
 

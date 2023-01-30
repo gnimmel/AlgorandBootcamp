@@ -128,7 +128,7 @@ class Raffle(Application):
             #numTickets.set(payment.get().amount() / self.ticket_price.get()),
             
             self.num_tickets.set(numTickets.get()),
-            #self.entriesArrayLength.get(),
+            self.entriesArrayLength.set(self.entriesArrayLength + numTickets.get()),
             
             Approve()
         )
