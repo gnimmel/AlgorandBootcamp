@@ -37,7 +37,7 @@ class Raffle(Application):
         TealType.uint64,
         default=Int(BEACON_ID_TESTNET),
         descr="App ID of the randomness beacon",
-        static=True
+        #static=True
     )
 
     commitment_round: Final[ApplicationStateValue] = ApplicationStateValue(
@@ -116,14 +116,16 @@ class Raffle(Application):
         # end raffle
 
     @external(authorize=Authorize.opted_in(Global.current_application_id())) 
-    def buy_tickets(self, payment: abi.PaymentTransaction):
-        
+    def buy_tickets(self, payment: abi.PaymentTransaction, numTickets: abi.Uint64):
+    
         return Seq(
             Assert(payment.get().amount() > self.ticket_price.get()),
 
-            (numTickets := abi.Uint64()).set(payment.get().amount() / self.ticket_price.get()),
+            #numTickets.set(payment.get().amount() / self.ticket_price.get()),
             self.num_tickets.set(numTickets.get()),
-            self.entriesArrayLength.get()
+            #self.entriesArrayLength.get(),
+            
+            Approve()
         )
         # assign tickets to user
         # push user account to entries array
@@ -197,6 +199,8 @@ class Raffle(Application):
         return Seq(
             self.initialize_application_state(),
             self.ticket_price.set(price.get()),
+
+            (round := ScratchVar()).store(Global.round() + Int(3)),
             self.commitment_round.set(round.load()),
         )
 
