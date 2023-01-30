@@ -12,16 +12,18 @@ import logging
 
 class Raffle(Application):
 
+    # TODO: Probably need to calculate MIN Balance
+
     ###
     # Constants
     ###
 
     # Max number of tickets that can be purchased
     # TODO: Make this configurable
-    MAX_NUM_TICKETS = 100
+    MAX_NUM_TICKETS = 20
 
     # Max number of tickets that can be purchased per user
-    MAX_NUM_TICKETS_PER_ACCOUNT = 10
+    MAX_NUM_TICKETS_PER_ACCOUNT = 5
 
     # Price per ticket. Default price is 1 Algo
     PRICE_PER_TICKET = 1000000 
@@ -69,7 +71,8 @@ class Raffle(Application):
     #     descr="Array of account addresses that have purchased tickets"
     # )
 
-    ticketAddresses = List(abi.Address, 100)
+    ticketAddresses = List(abi.Address, MAX_NUM_TICKETS)
+#   Pop(self.ticketAddresses.create()),
 
     entriesArrayLength: Final[ApplicationStateValue] = ApplicationStateValue(
         stack_type=TealType.uint64,
@@ -121,15 +124,22 @@ class Raffle(Application):
 
     @external(authorize=Authorize.opted_in(Global.current_application_id())) 
     def buy_tickets(self, payment: abi.PaymentTransaction, numTickets: abi.Uint64):
-        
+        i = ScratchVar(TealType.uint64)
+
         return Seq(
             Assert(payment.get().amount() > (numTickets.get() * self.ticket_price)),
 
             #numTickets.set(payment.get().amount() / self.ticket_price.get()),
             
             self.num_tickets.set(numTickets.get()),
-            self.entriesArrayLength.set(self.entriesArrayLength + numTickets.get()),
-            
+            For(i.store(Int(0)), i.load() < numTickets.get(), i.store(i.load() + Int(1)))
+            .Do(
+                (addr := abi.make(abi.Address)).set(Txn.sender()),
+                self.ticketAddresses[self.entriesArrayLength.get()].set(addr),
+                self.entriesArrayLength.set(self.entriesArrayLength + Int(1)),   
+            ),
+
+            #self.entriesArrayLength.set(self.entriesArrayLength + numTickets.get()),
             Approve()
         )
         # assign tickets to user
@@ -137,10 +147,10 @@ class Raffle(Application):
         # update entryArrayLength
 
     @external(authorize=Authorize.only(Global.creator_address()))
-    def init_raffle(self, prize: abi.Asset, price: abi.Uint64):
+    def init_raffle(self):#, prize: abi.Asset, price: abi.Uint64):
         return Seq(
             Assert(self.entriesArrayLength.get() == Int(0)),
-
+            
             Approve()
         )
         # confirm there are no raffles running -> 
@@ -204,7 +214,7 @@ class Raffle(Application):
         return Seq(
             self.initialize_application_state(),
             self.ticket_price.set(price.get()),
-
+            
             (round := ScratchVar()).store(Global.round() + Int(3)),
             self.commitment_round.set(round.load()),
         )
@@ -217,7 +227,6 @@ class Raffle(Application):
     def update(self):
         return Approve()
 
-    # HOW DOES ARRAY MANIPULATION WORK???? deletion etc... if at all
     @clear_state
     def clear_state(self):
         return Approve()
