@@ -63,13 +63,13 @@ def demo():
 
     
     # BOB BUYS TICKETS 
-    print("### BOB ###\n")
+    print("\n### BOB ###\n")
     
     # Set up Guest 1 application client
     app_client_bob = app_client.prepare(signer=user_acct2.signer)
 
-    # Alice opting in and buying tickets
-    print("Alice buying tickets...")
+    # Bob opting in and buying tickets
+    print("Bob buying tickets...")
     ptxn2 = TransactionWithSigner(
             txn=transaction.PaymentTxn(user_acct2.address, sp, app_addr, 10 * consts.algo),
             signer=user_acct2.signer,
@@ -87,8 +87,11 @@ def demo():
 
     # How many tickets have been purchased?
     total = app_client.call(app.read_num_entries)
-    print(f"Total tickets bought: {total.return_value}")
+    print(f"\nTotal tickets bought: {total.return_value}")
 
+    winner = app_client.call(app.pick_winner)
+    print(f"\nWinning index: {winner.return_value}")
+    
 
 if __name__ == "__main__":
     demo()
