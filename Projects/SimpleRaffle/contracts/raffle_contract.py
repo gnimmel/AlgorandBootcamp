@@ -23,7 +23,7 @@ class Raffle(Application):
     MAX_NUM_TICKETS = 20
 
     # Max number of tickets that can be purchased per user
-    MAX_NUM_TICKETS_PER_ACCOUNT = 5
+    MAX_TICKETS_PER_ACCOUNT = 5
 
     # Price per ticket. Default price is 1 Algo
     PRICE_PER_TICKET = 1000000 
@@ -61,6 +61,12 @@ class Raffle(Application):
         stack_type=TealType.uint64,
         default=Int(PRICE_PER_TICKET),
         descr="Price per ticket"
+    )
+
+    winner_indx: Final[ApplicationStateValue] = ApplicationStateValue(
+        stack_type=TealType.uint64,
+        default=Int(0),
+        descr="Index of the randomly selected winner"
     )
 
     # HMMMM: This is not doable 
@@ -103,12 +109,66 @@ class Raffle(Application):
     ###
 
     @external(authorize=Authorize.only(Global.creator_address()))
-    def finalize_raffle(self):
+    def init_raffle(self):#, prize: abi.Asset, price: abi.Uint64):
+        return Seq(
+            Assert(self.entriesArrayLength.get() == Int(0)),
+            
+            Approve()
+        )
+        # confirm there are no raffles running -> 
+        # update ticket price
+
+
+    @external(authorize=Authorize.opted_in(Global.current_application_id())) 
+    def buy_tickets(self, payment: abi.PaymentTransaction, numTickets: abi.Uint64):
+        """Buy tickets for the raffle. Account must be opted in"""
+        i = ScratchVar(TealType.uint64)
+
+        return Seq(
+            Assert(payment.get().amount() > (numTickets.get() * self.ticket_price)),
+
+            #numTickets.set(payment.get().amount() / self.ticket_price.get()),
+            
+            self.num_tickets.set(numTickets.get()),
+            For(i.store(Int(0)), i.load() < numTickets.get(), i.store(i.load() + Int(1)))
+            .Do(
+                (addr := abi.make(abi.Address)).set(Txn.sender()),
+                #UGGGHHHHH
+                #self.ticketAddresses[self.entriesArrayLength].set(addr),
+                self.entriesArrayLength.set(self.entriesArrayLength + Int(1)),   
+            ),
+
+            #self.entriesArrayLength.set(self.entriesArrayLength + numTickets.get()),
+            
+            Approve()
+        )
+        # assign tickets to user
+        # push user account to entries array
+        # update entryArrayLength
+
+
+    @external(authorize=Authorize.only(Global.creator_address()))
+    def pick_winner(self,
+        *, 
+        output: abi.Uint64):
         
+        won = abi.Uint64()
+
         return Seq(
             Assert(self.entriesArrayLength > Int(0)), # Did anyone buy tickets?
-            #print(self.get_random_int(self.entriesArrayLength)),
-            Approve()
+            #self.winner_indx.set(self.get_random_int(self.entriesArrayLength.get())),
+            (randomness := abi.DynamicBytes()).decode(
+                self.get_randomness()
+            ),
+            won.set(ExtractUint64(randomness.get(), Int(0)) % self.entriesArrayLength),
+            If(won.get())
+            .Then(
+                output.set(won)
+            ).Else(
+                output.set(0)
+            ),
+
+            #Approve()
         )
 
         # return Seq(
@@ -121,40 +181,6 @@ class Raffle(Application):
         # set is_winner flag
         # send prize
         # end raffle
-
-    @external(authorize=Authorize.opted_in(Global.current_application_id())) 
-    def buy_tickets(self, payment: abi.PaymentTransaction, numTickets: abi.Uint64):
-        i = ScratchVar(TealType.uint64)
-
-        return Seq(
-            Assert(payment.get().amount() > (numTickets.get() * self.ticket_price)),
-
-            #numTickets.set(payment.get().amount() / self.ticket_price.get()),
-            
-            self.num_tickets.set(numTickets.get()),
-            For(i.store(Int(0)), i.load() < numTickets.get(), i.store(i.load() + Int(1)))
-            .Do(
-                (addr := abi.make(abi.Address)).set(Txn.sender()),
-                self.ticketAddresses[self.entriesArrayLength.get()].set(addr),
-                self.entriesArrayLength.set(self.entriesArrayLength + Int(1)),   
-            ),
-
-            #self.entriesArrayLength.set(self.entriesArrayLength + numTickets.get()),
-            Approve()
-        )
-        # assign tickets to user
-        # push user account to entries array
-        # update entryArrayLength
-
-    @external(authorize=Authorize.only(Global.creator_address()))
-    def init_raffle(self):#, prize: abi.Asset, price: abi.Uint64):
-        return Seq(
-            Assert(self.entriesArrayLength.get() == Int(0)),
-            
-            Approve()
-        )
-        # confirm there are no raffles running -> 
-        # update ticket price
 
     ###
     # Internals
@@ -264,6 +290,11 @@ class Raffle(Application):
     def read_ticket_price(self, *, output: abi.Uint64):
         """Read price per ticket. Only callable by Creator."""
         return output.set(self.ticket_price)
+
+    @external(read_only=True)
+    def read_winner_indx(self, *, output: abi.Uint64):
+        """Read price per ticket. Only callable by Creator."""
+        return output.set(self.winner_indx)
 
 
 if __name__ == "__main__":
