@@ -18,7 +18,7 @@ auction_client.ts
 
 # production
 /build
-seed.txt
+seed.json
 
 # misc
 .DS_Store

@@ -412,7 +412,7 @@ pushbytes 0x6f776e6572 // "owner"
 global CreatorAddress
 app_global_put
 bytec_3 // "ticket_price"
-pushint 1000000 // 1000000
+pushint 10000 // 10000
 app_global_put
 bytec 6 // "winner_indx"
 intc_0 // 0
