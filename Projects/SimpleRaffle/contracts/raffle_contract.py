@@ -25,8 +25,8 @@ class Raffle(Application):
     # Max number of tickets that can be purchased per user
     MAX_TICKETS_PER_ACCOUNT = 5
 
-    # Price per ticket. Default price is 1 Algo
-    PRICE_PER_TICKET = 1000000 
+    # Price per ticket. Default price is .01 Algo
+    PRICE_PER_TICKET = 10000 
 
     # Randomness Beacon app IDs
     BEACON_ID_TESTNET = 110096026
@@ -151,12 +151,13 @@ class Raffle(Application):
     def pick_winner(self,
         *, 
         output: abi.Uint64):
-        
+        """Use randomness beacon to select an index from the entries array"""
+
         won = abi.Uint64()
 
         return Seq(
             Assert(self.entriesArrayLength > Int(0)), # Did anyone buy tickets?
-            #self.winner_indx.set(self.get_random_int(self.entriesArrayLength.get())),
+            
             (randomness := abi.DynamicBytes()).decode(
                 self.get_randomness()
             ),
@@ -171,11 +172,6 @@ class Raffle(Application):
             #Approve()
         )
 
-        # return Seq(
-        #     (indx := abi.Uint64()).set(self.get_random_int(self.entriesArrayLength)),
-        # )
-        #indx = self.get_random_int()
-
         # check that winning addr is still opted in
         # use indx to extract winning address
         # set is_winner flag
@@ -186,32 +182,6 @@ class Raffle(Application):
     # Internals
     ###
 
-    @internal(TealType.uint64)
-    def get_random_int(
-        self, 
-        max: abi.Uint64, 
-        # *, 
-        # output: abi.Uint64
-        ):
-        """Use randomness beacon to select an index from the entries array"""
-        #won = abi.Uint64()
-
-        return Seq(
-            # # Get the randomness
-            (randomness := abi.DynamicBytes()).decode(
-                self.get_randomness(self.commitment_round.get())
-            ),
-            # # take the modulo of the random number and the length of the entries array to get a value within the array
-            #won.set(randomness.get() % max),
-            # won.set(ExtractUint64(randomness.get(), Int(0)) % max),
-            # If(won.get()).Then(
-            #     output.set(won)
-            # ).Else(
-            #     output.set(0)
-            # )
-            ExtractUint64(randomness.get(), Int(0)) % max
-        )
-
     @internal(TealType.bytes)
     def get_randomness(self):
         """get random from beacon"""
@@ -221,9 +191,10 @@ class Raffle(Application):
             (user_data := abi.make(abi.DynamicArray[abi.Byte])).set([]), # Should entropy be something else? 
             
             InnerTxnBuilder.ExecuteMethodCall(
-                app_id=self.beacon_app_id.get(),
+                app_id=self.beacon_app_id,
                 method_signature="must_get(uint64,byte[])byte[]",
                 args=[round, user_data],
+                #extra_fields={TxnField.accounts: [self.beacon_app_id]},
             ),
             # Remove first 4 bytes (ABI return prefix)
             # and return the rest

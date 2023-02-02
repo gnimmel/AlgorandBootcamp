@@ -1,24 +1,76 @@
 from algosdk import transaction
+from algosdk import mnemonic
+from algosdk.account import generate_account, address_from_private_key
 from algosdk.error import AlgodHTTPError
+from algosdk.encoding import encode_address
 from algosdk.atomic_transaction_composer import (
     TransactionWithSigner,
+    AtomicTransactionComposer,
+    AccountTransactionSigner,
 )
+from algosdk.v2client.algod import AlgodClient
 
 from beaker import sandbox, consts
 from beaker.client import ApplicationClient
+from beaker.sandbox import SandboxAccount
 
 from raffle_contract import Raffle
+import json
+import os
 
-client = sandbox.get_algod_client()
-accts = sandbox.get_accounts()
-
-creator_acct = accts.pop()
-user_acct1 = accts.pop()
-user_acct2 = accts.pop()
+ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__), '..'))
+jsonPath = (os.path.join(ROOT_DIR, 'config', 'accounts.json'))
+accountsJson = json.loads(open(jsonPath).read())
+for i in accountsJson['accounts']:
+    print(i['mnemonic'])
 
 app = Raffle()
 
-app_client = ApplicationClient(client, app, signer=creator_acct.signer)
+###
+# SANDBOX
+###
+
+# accts = sandbox.get_accounts()
+
+# creator_acct = accts.pop()
+# user_acct1 = accts.pop()
+# user_acct2 = accts.pop()
+
+# app_client = ApplicationClient(
+#     client=sandbox.get_algod_client(), 
+#     app=app, 
+#     signer=creator_acct.signer
+# )
+
+###
+# TESTNET
+###
+
+creator_private_key = mnemonic.to_private_key(accountsJson['accounts'][0]['mnemonic'])
+creator_address = address_from_private_key(creator_private_key)
+creator_signer = AccountTransactionSigner(creator_private_key)
+creator_acct = SandboxAccount(creator_address, creator_private_key, creator_signer)
+
+user1_private_key = mnemonic.to_private_key(accountsJson['accounts'][1]['mnemonic'])
+user1_address = address_from_private_key(user1_private_key)
+user1_signer = AccountTransactionSigner(user1_private_key)
+user_acct1 = SandboxAccount(user1_address, user1_private_key, user1_signer)
+
+user2_private_key = mnemonic.to_private_key(accountsJson['accounts'][2]['mnemonic'])
+user2_address = address_from_private_key(user2_private_key)
+user2_signer = AccountTransactionSigner(user2_private_key)
+user_acct2 = SandboxAccount(user2_address, user2_private_key, user2_signer)
+
+client = AlgodClient("", "https://testnet-api.algonode.cloud")
+app_client = ApplicationClient(
+    client=client, 
+    app=app, 
+    signer=creator_acct.signer
+)
+
+###
+# DEMO
+###
 
 def demo():
 
@@ -91,7 +143,7 @@ def demo():
 
     winner = app_client.call(app.pick_winner)
     print(f"\nWinning index: {winner.return_value}")
-    
+
 
 if __name__ == "__main__":
     demo()
